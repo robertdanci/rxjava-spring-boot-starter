@@ -62,6 +62,10 @@ dependencies {
     testCompile (libraries.springBootTest)
     testCompile (libraries.junit)
     testCompile (libraries.mockito)
+    testCompile (libraries.jerseyClient)
+    testCompile (libraries.jerseyMediaSse)
+    testCompile (libraries.jacksonJsonProvider)
+    testCompile (libraries.jerseyMediaJsonJackson)
 }
 
 findbugs {

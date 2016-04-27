@@ -15,7 +15,7 @@
  */
 package io.jmnarloch.spring.boot.rxjava.mvc;
 
-import io.jmnarloch.spring.boot.rxjava.async.ObservableDeferredResult;
+import io.jmnarloch.spring.boot.rxjava.async.ListDeferredResult;
 import org.springframework.core.MethodParameter;
 import org.springframework.web.context.request.NativeWebRequest;
 import org.springframework.web.context.request.async.WebAsyncUtils;
@@ -27,7 +27,7 @@ import rx.Observable;
  * A specialized {@link AsyncHandlerMethodReturnValueHandler} that handles {@link Observable} return types.
  *
  * @author Jakub Narloch
- * @see ObservableDeferredResult
+ * @see ListDeferredResult
  */
 public class ObservableReturnValueHandler implements AsyncHandlerMethodReturnValueHandler {
 
@@ -44,7 +44,6 @@ public class ObservableReturnValueHandler implements AsyncHandlerMethodReturnVal
     @SuppressWarnings("unchecked")
     @Override
     public void handleReturnValue(Object returnValue, MethodParameter returnType, ModelAndViewContainer mavContainer, NativeWebRequest webRequest) throws Exception {
-
         if (returnValue == null) {
             mavContainer.setRequestHandled(true);
             return;
@@ -52,6 +51,6 @@ public class ObservableReturnValueHandler implements AsyncHandlerMethodReturnVal
 
         final Observable<?> observable = Observable.class.cast(returnValue);
         WebAsyncUtils.getAsyncManager(webRequest)
-                .startDeferredResultProcessing(new ObservableDeferredResult(observable), mavContainer);
+                .startDeferredResultProcessing(new ListDeferredResult(observable), mavContainer);
     }
 }

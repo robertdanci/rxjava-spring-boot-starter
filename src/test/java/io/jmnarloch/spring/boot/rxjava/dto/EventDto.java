@@ -44,4 +44,12 @@ public class EventDto {
     public Date getDate() {
         return date;
     }
+
+    @Override
+    public String toString() {
+        return "EventDto{" +
+                "name='" + name + '\'' +
+                ", date=" + date +
+                '}';
+    }
 }

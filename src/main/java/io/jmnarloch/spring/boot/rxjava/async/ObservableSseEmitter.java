@@ -18,28 +18,69 @@ package io.jmnarloch.spring.boot.rxjava.async;
 import org.springframework.http.MediaType;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 import rx.Observable;
+import rx.Observer;
+import rx.Subscription;
+
+import java.io.IOException;
+
+import static org.springframework.util.Assert.notNull;
 
 /**
  * A specialized {@link SseEmitter} that handles {@link Observable} types. The emitter subscribes to the
  * passed {@link Observable} instance and emits every produced value through {@link #send(Object, MediaType)}.
  *
  * @author Jakub Narloch
+ * @author Robert Danci
+ *
  * @see SseEmitter
  */
-public class ObservableSseEmitter<T> extends SseEmitter {
+public class ObservableSseEmitter<T> extends SseEmitter implements Observer<T>, Runnable {
 
-    private final ResponseBodyEmitterSubscriber<T> subscriber;
+    private final MediaType mediaType;
+    private final Subscription subscription;
 
     public ObservableSseEmitter(Observable<T> observable) {
-        this(null, observable);
+        this(observable, null);
     }
 
-    public ObservableSseEmitter(MediaType mediaType, Observable<T> observable) {
-        this(null, mediaType, observable);
+    public ObservableSseEmitter(Observable<T> observable, long timeout) {
+        this(observable, null, timeout);
     }
 
-    public ObservableSseEmitter(Long timeout, MediaType mediaType, Observable<T> observable) {
+    public ObservableSseEmitter(Observable<T> observable, MediaType mediaType) {
+        this(observable, mediaType, null);
+    }
+
+    public ObservableSseEmitter(Observable<T> observable, MediaType mediaType, Long timeout) {
         super(timeout);
-        this.subscriber = new ResponseBodyEmitterSubscriber<T>(mediaType, observable, this);
+        notNull(observable, "Observable cannot be null");
+        this.subscription = observable.subscribe(this);
+        this.mediaType = mediaType;
+        this.onTimeout(this);
+    }
+
+    @Override
+    public void onNext(T value) {
+        try {
+            send(value, mediaType);
+        } catch (IOException e) {
+            throw new RuntimeException(e.getMessage(), e);
+        }
+    }
+
+    @Override
+    public void onError(Throwable e) {
+        completeWithError(e);
+    }
+
+    @Override
+    public void onCompleted() {
+        complete();
+    }
+
+    @Override
+    public void run() {
+        subscription.unsubscribe();
+        onCompleted();
     }
 }

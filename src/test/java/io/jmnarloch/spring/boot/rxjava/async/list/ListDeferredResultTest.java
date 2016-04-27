@@ -13,17 +13,17 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package io.jmnarloch.spring.boot.rxjava.async;
+package io.jmnarloch.spring.boot.rxjava.async.list;
 
+import io.jmnarloch.spring.boot.rxjava.async.ListDeferredResult;
 import io.jmnarloch.spring.boot.rxjava.dto.EventDto;
 import org.junit.Test;
 import org.junit.runner.RunWith;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.boot.autoconfigure.EnableAutoConfiguration;
 import org.springframework.boot.test.IntegrationTest;
 import org.springframework.boot.test.SpringApplicationConfiguration;
 import org.springframework.boot.test.TestRestTemplate;
-import org.springframework.context.annotation.Configuration;
 import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
@@ -31,87 +31,36 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.test.annotation.DirtiesContext;
 import org.springframework.test.context.junit4.SpringJUnit4ClassRunner;
 import org.springframework.test.context.web.WebAppConfiguration;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestMethod;
-import org.springframework.web.bind.annotation.RestController;
-import rx.Observable;
-import rx.functions.Func1;
 
 import java.util.Arrays;
 import java.util.Collections;
-import java.util.Date;
 import java.util.List;
-import java.util.concurrent.TimeUnit;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
-import static org.springframework.http.MediaType.APPLICATION_JSON_UTF8_VALUE;
+import static org.junit.Assert.*;
 
 /**
- * Tests the {@link ObservableDeferredResult} class.
+ * Tests the {@link ListDeferredResult} class.
  *
  * @author Jakub Narloch
+ * @author Robert Danci
  */
 @RunWith(SpringJUnit4ClassRunner.class)
-@SpringApplicationConfiguration(classes = ObservableDeferredResultTest.Application.class)
+@SpringApplicationConfiguration(classes = Application.class)
 @WebAppConfiguration
 @IntegrationTest({"server.port=0"})
 @DirtiesContext
-public class ObservableDeferredResultTest {
+public class ListDeferredResultTest {
 
     @Value("${local.server.port}")
-    private int port = 0;
+    private int port;
 
-    private TestRestTemplate restTemplate = new TestRestTemplate();
-
-    @Configuration
-    @EnableAutoConfiguration
-    @RestController
-    protected static class Application {
-
-        @RequestMapping(method = RequestMethod.GET, value = "/single")
-        public ObservableDeferredResult<String> single() {
-            return new ObservableDeferredResult<String>(Observable.just("single value"));
-        }
-
-        @RequestMapping(method = RequestMethod.GET, value = "/multiple")
-        public ObservableDeferredResult<String> multiple() {
-            return new ObservableDeferredResult<String>(Observable.just("multiple", "values"));
-        }
-
-        @RequestMapping(method = RequestMethod.GET, value = "/event", produces = APPLICATION_JSON_UTF8_VALUE)
-        public ObservableDeferredResult<EventDto> event() {
-            return new ObservableDeferredResult<EventDto>(
-                    Observable.just(
-                            new EventDto("Spring.io", new Date()),
-                            new EventDto("JavaOne", new Date())
-                    )
-            );
-        }
-
-        @RequestMapping(method = RequestMethod.GET, value = "/throw")
-        public ObservableDeferredResult<Object> error() {
-            return new ObservableDeferredResult<Object>(Observable.error(new RuntimeException("Unexpected")));
-        }
-
-        @RequestMapping(method = RequestMethod.GET, value = "/timeout")
-        public ObservableDeferredResult<String> timeout() {
-            return new ObservableDeferredResult<String>(Observable.timer(1, TimeUnit.MINUTES).map(new Func1<Long, String>() {
-                @Override
-                public String call(Long aLong) {
-                    return "single value";
-                }
-            }));
-        }
-    }
+    @Autowired
+    private TestRestTemplate restTemplate;
 
     @Test
     public void shouldRetrieveSingleValue() {
-
-        // when
         ResponseEntity<List> response = restTemplate.getForEntity(path("/single"), List.class);
 
-        // then
         assertNotNull(response);
         assertEquals(HttpStatus.OK, response.getStatusCode());
         assertEquals(Collections.singletonList("single value"), response.getBody());
@@ -119,11 +68,8 @@ public class ObservableDeferredResultTest {
 
     @Test
     public void shouldRetrieveMultipleValues() {
-
-        // when
         ResponseEntity<List> response = restTemplate.getForEntity(path("/multiple"), List.class);
 
-        // then
         assertNotNull(response);
         assertEquals(HttpStatus.OK, response.getStatusCode());
         assertEquals(Arrays.asList("multiple", "values"), response.getBody());
@@ -131,12 +77,10 @@ public class ObservableDeferredResultTest {
 
     @Test
     public void shouldRetrieveJsonSerializedListValues() {
-
-        // when
         ResponseEntity<List<EventDto>> response = restTemplate.exchange(path("/event"), HttpMethod.GET, null,
-                new ParameterizedTypeReference<List<EventDto>>() {});
+                new ParameterizedTypeReference<List<EventDto>>() {
+                });
 
-        // then
         assertNotNull(response);
         assertEquals(HttpStatus.OK, response.getStatusCode());
         assertEquals(2, response.getBody().size());
@@ -145,24 +89,28 @@ public class ObservableDeferredResultTest {
 
     @Test
     public void shouldRetrieveErrorResponse() {
-
-        // when
         ResponseEntity<Object> response = restTemplate.getForEntity(path("/throw"), Object.class);
 
-        // then
         assertNotNull(response);
         assertEquals(HttpStatus.INTERNAL_SERVER_ERROR, response.getStatusCode());
     }
 
     @Test
-    public void shouldTimeoutOnConnection() {
+    public void shouldTimeoutOnConnectionAndReturnBody() {
+        ResponseEntity<String> response = restTemplate.getForEntity(path("/timeoutWithBody"), String.class);
 
-        // when
-        ResponseEntity<Object> response = restTemplate.getForEntity(path("/timeout"), Object.class);
-
-        // then
         assertNotNull(response);
-        assertEquals(HttpStatus.INTERNAL_SERVER_ERROR, response.getStatusCode());
+        assertEquals(HttpStatus.OK, response.getStatusCode());
+        assertEquals("Timeout", response.getBody());
+    }
+
+    @Test
+    public void shouldTimeoutOnConnection() {
+        ResponseEntity<String> response = restTemplate.getForEntity(path("/timeoutWithoutBody"), String.class);
+
+        assertNotNull(response);
+        assertEquals(HttpStatus.OK, response.getStatusCode());
+        assertNull(response.getBody());
     }
 
     private String path(String context) {

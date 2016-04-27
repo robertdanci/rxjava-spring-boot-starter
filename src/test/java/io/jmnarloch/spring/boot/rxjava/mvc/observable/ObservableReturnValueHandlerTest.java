@@ -13,89 +13,67 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package io.jmnarloch.spring.boot.rxjava.mvc;
+package io.jmnarloch.spring.boot.rxjava.mvc.observable;
 
+import io.jmnarloch.spring.boot.rxjava.mvc.ObservableReturnValueHandler;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.boot.autoconfigure.EnableAutoConfiguration;
 import org.springframework.boot.test.IntegrationTest;
 import org.springframework.boot.test.SpringApplicationConfiguration;
 import org.springframework.boot.test.TestRestTemplate;
-import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.test.annotation.DirtiesContext;
 import org.springframework.test.context.junit4.SpringJUnit4ClassRunner;
 import org.springframework.test.context.web.WebAppConfiguration;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestMethod;
-import org.springframework.web.bind.annotation.RestController;
-import rx.Single;
+
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.List;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 
 /**
- * Tests the {@link SingleReturnValueHandler} class.
+ * Tests the {@link ObservableReturnValueHandler} class.
  *
  * @author Jakub Narloch
  */
 @RunWith(SpringJUnit4ClassRunner.class)
-@SpringApplicationConfiguration(classes = SingleReturnValueHandlerTest.Application.class)
+@SpringApplicationConfiguration(classes = Application.class)
 @WebAppConfiguration
 @IntegrationTest({"server.port=0"})
 @DirtiesContext
-public class SingleReturnValueHandlerTest {
+public class ObservableReturnValueHandlerTest {
 
     @Value("${local.server.port}")
     private int port = 0;
 
     private TestRestTemplate restTemplate = new TestRestTemplate();
 
-    @Configuration
-    @EnableAutoConfiguration
-    @RestController
-    protected static class Application {
-
-        @RequestMapping(method = RequestMethod.GET, value = "/single")
-        public Single<String> single() {
-            return Single.just("single value");
-        }
-
-        @RequestMapping(method = RequestMethod.GET, value = "/singleWithResponse")
-        public Single<ResponseEntity<String>> singleWithResponse() {
-            return Single.just(new ResponseEntity<String>("single value", HttpStatus.NOT_FOUND));
-        }
-
-        @RequestMapping(method = RequestMethod.GET, value = "/throw")
-        public Single<Object> error() {
-            return Single.error(new RuntimeException("Unexpected"));
-        }
-    }
-
     @Test
     public void shouldRetrieveSingleValue() {
 
         // when
-        ResponseEntity<String> response = restTemplate.getForEntity(path("/single"), String.class);
+        ResponseEntity<List> response = restTemplate.getForEntity(path("/single"), List.class);
 
         // then
         assertNotNull(response);
         assertEquals(HttpStatus.OK, response.getStatusCode());
-        assertEquals("single value", response.getBody());
+        assertEquals(Collections.singletonList("single value"), response.getBody());
     }
 
     @Test
-    public void shouldRetrieveSingleValueWithStatusCode() {
+    public void shouldRetrieveMultipleValues() {
 
         // when
-        ResponseEntity<String> response = restTemplate.getForEntity(path("/singleWithResponse"), String.class);
+        ResponseEntity<List> response = restTemplate.getForEntity(path("/multiple"), List.class);
 
         // then
         assertNotNull(response);
-        assertEquals(HttpStatus.NOT_FOUND, response.getStatusCode());
-        assertEquals("single value", response.getBody());
+        assertEquals(HttpStatus.OK, response.getStatusCode());
+        assertEquals(Arrays.asList("multiple", "values"), response.getBody());
     }
 
     @Test

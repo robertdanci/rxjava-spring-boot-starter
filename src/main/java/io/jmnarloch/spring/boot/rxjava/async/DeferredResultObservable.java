@@ -17,8 +17,10 @@ package io.jmnarloch.spring.boot.rxjava.async;
 
 import org.springframework.web.context.request.async.DeferredResult;
 import rx.Observable;
-import rx.Subscriber;
+import rx.Observer;
 import rx.Subscription;
+
+import static org.springframework.util.Assert.notNull;
 
 /**
  * A subscriber that sets the single value produced by the {@link Observable} on the {@link DeferredResult}.
@@ -27,27 +29,33 @@ import rx.Subscription;
  * @author Robert Danci
  * @see DeferredResult
  */
-class DeferredResultSubscriber<T> extends Subscriber<T> implements Runnable {
-
-    private final DeferredResult<T> deferredResult;
+class DeferredResultObservable<T> extends DeferredResult<T> implements Runnable, Observer<T> {
 
     private final Subscription subscription;
 
-    public DeferredResultSubscriber(Observable<T> observable, DeferredResult<T> deferredResult) {
-        this.deferredResult = deferredResult;
-        this.deferredResult.onTimeout(this);
-        this.deferredResult.onCompletion(this);
+    public DeferredResultObservable(Observable<T> observable) {
+        this(observable, null);
+    }
+
+    public DeferredResultObservable(Observable<T> observable, Long timeout) {
+        this(observable, timeout, null);
+    }
+
+    public DeferredResultObservable(Observable<T> observable, Long timeout, Object timeoutResult) {
+        super(timeout, timeoutResult);
+        notNull(observable, "Observable cannot be null");
         this.subscription = observable.subscribe(this);
+        this.onTimeout(this);
     }
 
     @Override
     public void onNext(T value) {
-        deferredResult.setResult(value);
+        setResult(value);
     }
 
     @Override
     public void onError(Throwable e) {
-        deferredResult.setErrorResult(e);
+        setErrorResult(e);
     }
 
     @Override
@@ -56,6 +64,6 @@ class DeferredResultSubscriber<T> extends Subscriber<T> implements Runnable {
 
     @Override
     public void run() {
-        this.subscription.unsubscribe();
+        subscription.unsubscribe();
     }
 }

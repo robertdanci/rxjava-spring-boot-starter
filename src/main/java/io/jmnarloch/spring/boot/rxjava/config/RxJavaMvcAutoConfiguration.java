@@ -63,16 +63,14 @@ public class RxJavaMvcAutoConfiguration {
 
         @RxJava
         @Autowired
-        private List<AsyncHandlerMethodReturnValueHandler> handlers = new ArrayList<AsyncHandlerMethodReturnValueHandler>();
+        private final List<AsyncHandlerMethodReturnValueHandler> handlers = new ArrayList<>();
 
         @Bean
         public WebMvcConfigurer rxJavaWebMvcConfiguration() {
             return new WebMvcConfigurerAdapter() {
                 @Override
                 public void addReturnValueHandlers(List<HandlerMethodReturnValueHandler> returnValueHandlers) {
-                    if (handlers != null) {
-                        returnValueHandlers.addAll(handlers);
-                    }
+                    returnValueHandlers.addAll(handlers);
                 }
             };
         }

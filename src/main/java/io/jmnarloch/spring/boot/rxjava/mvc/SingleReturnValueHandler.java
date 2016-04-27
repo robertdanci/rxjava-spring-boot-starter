@@ -44,7 +44,6 @@ public class SingleReturnValueHandler implements AsyncHandlerMethodReturnValueHa
     @SuppressWarnings("unchecked")
     @Override
     public void handleReturnValue(Object returnValue, MethodParameter returnType, ModelAndViewContainer mavContainer, NativeWebRequest webRequest) throws Exception {
-
         if (returnValue == null) {
             mavContainer.setRequestHandled(true);
             return;
